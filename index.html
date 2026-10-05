@@ -1,0 +1,835 @@
+<title>Spelling Bee Night</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: a school-auditorium stage. One main "podium" column for the speller, a scoreboard rail beside it (stacks under on phones). Contestants wear marigold placards. */
+:root {
+  --paper: #f3f4fa;
+  --card: #ffffff;
+  --ink: #161c4a;
+  --muted: #5b6189;
+  --line: #d9dcec;
+  --cobalt: #2438c7;
+  --cobalt-soft: #e4e7fb;
+  --marigold: #f4b400;
+  --placard-ink: #161c4a;
+  --good: #1a7f49;
+  --good-soft: #def3e7;
+  --bad: #c3352b;
+  --bad-soft: #fbe3e1;
+  --shadow: 0 1px 0 rgba(22, 28, 74, .06), 0 8px 24px -12px rgba(22, 28, 74, .25);
+  --f-display: "Young Serif", Georgia, "Times New Roman", serif;
+  --f-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0d1029; --card: #161a3d; --ink: #eef0ff; --muted: #a0a5cc; --line: #2a2f5c;
+    --cobalt: #8e9aff; --cobalt-soft: #1f2556; --marigold: #ffc52e; --placard-ink: #161c4a;
+    --good: #5ad08e; --good-soft: #13372a; --bad: #ff7a6e; --bad-soft: #401c22;
+    --shadow: 0 1px 0 rgba(0,0,0,.3), 0 10px 30px -14px rgba(0,0,0,.7);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0d1029; --card: #161a3d; --ink: #eef0ff; --muted: #a0a5cc; --line: #2a2f5c;
+  --cobalt: #8e9aff; --cobalt-soft: #1f2556; --marigold: #ffc52e; --placard-ink: #161c4a;
+  --good: #5ad08e; --good-soft: #13372a; --bad: #ff7a6e; --bad-soft: #401c22;
+  --shadow: 0 1px 0 rgba(0,0,0,.3), 0 10px 30px -14px rgba(0,0,0,.7);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: 16px;
+  line-height: 1.5;
+  padding-inline: 16px;
+  padding-block: 20px 48px;
+}
+.wrap { max-width: 1040px; margin: 0 auto; display: grid; gap: 24px; }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 400; text-wrap: balance; margin: 0; line-height: 1.15; }
+p { margin: 0; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--cobalt); outline-offset: 2px; border-radius: 6px; }
+
+/* Masthead */
+.mast { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; border-bottom: 2px solid var(--ink); padding-bottom: 12px; }
+.mast h1 { font-size: clamp(30px, 5vw, 44px); letter-spacing: -.01em; }
+.mast h1 em { font-style: normal; color: var(--cobalt); }
+.mast .tag { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+
+.eyebrow { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; box-shadow: var(--shadow); }
+
+/* Buttons */
+.btn { appearance: none; border: 1.5px solid var(--ink); background: transparent; border-radius: 999px; padding: 10px 18px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: transform .08s ease, background .15s ease; }
+.btn:hover { background: var(--cobalt-soft); }
+.btn:active { transform: translateY(1px); }
+.btn.primary { background: var(--cobalt); border-color: var(--cobalt); color: var(--card); }
+.btn.primary:hover { filter: brightness(1.08); background: var(--cobalt); }
+.btn.big { padding: 14px 26px; font-size: 18px; }
+.btn.good { background: var(--good); border-color: var(--good); color: var(--card); }
+.btn.bad { background: var(--bad); border-color: var(--bad); color: var(--card); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.ghost { border-color: var(--line); }
+
+/* Setup */
+.setup { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 760px) { .setup { grid-template-columns: 1fr; } }
+.field { display: grid; gap: 8px; }
+.field + .field { margin-top: 18px; }
+.field > label, .field > .label { font-weight: 700; font-size: 15px; }
+.field .hint { font-size: 13px; color: var(--muted); }
+.players { display: grid; gap: 8px; }
+.prow { display: flex; gap: 8px; align-items: center; }
+.prow .num { width: 40px; height: 40px; flex: none; border-radius: 6px; background: var(--marigold); color: var(--placard-ink); font-family: var(--f-mono); font-weight: 700; display: grid; place-items: center; font-size: 15px; }
+.prow input { flex: 1; min-width: 0; padding: 9px 12px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--paper); }
+.prow input:focus { border-color: var(--cobalt); outline: none; }
+.icon-btn { width: 40px; height: 40px; flex: none; border-radius: 10px; border: 1.5px solid var(--line); background: transparent; cursor: pointer; font-size: 20px; line-height: 1; color: var(--muted); }
+.icon-btn:hover { color: var(--bad); border-color: var(--bad); }
+
+.seg { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label { border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; cursor: pointer; display: grid; gap: 2px; background: var(--paper); }
+.seg label b { font-weight: 700; font-size: 15px; }
+.seg label span { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+.seg input:checked + label { border-color: var(--cobalt); background: var(--cobalt-soft); box-shadow: inset 0 0 0 1px var(--cobalt); }
+.seg input:focus-visible + label { outline: 3px solid var(--cobalt); outline-offset: 2px; }
+.pips { display: inline-flex; gap: 3px; margin-right: 6px; vertical-align: 1px; }
+.pips i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); display: inline-block; }
+.pips i.on { background: var(--marigold); }
+
+.rules { display: grid; gap: 10px; font-size: 14.5px; color: var(--muted); }
+.rules strong { color: var(--ink); }
+.setup-foot { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 22px; }
+.err { color: var(--bad); font-size: 14px; font-weight: 600; }
+
+/* Game */
+.stage { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; align-items: start; }
+@media (max-width: 860px) { .stage { grid-template-columns: 1fr; } }
+
+.podium { display: grid; gap: 20px; }
+.speller { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+.placard { position: relative; width: 104px; height: 84px; flex: none; background: var(--marigold); color: var(--placard-ink); border-radius: 8px; display: grid; place-items: center; font-family: var(--f-mono); font-weight: 700; font-size: 40px; box-shadow: 0 6px 0 -2px rgba(0,0,0,.12); margin-top: 14px; }
+.placard::before, .placard::after { content: ""; position: absolute; top: -16px; width: 2px; height: 20px; background: var(--muted); }
+.placard::before { left: 22px; transform: rotate(14deg); }
+.placard::after { right: 22px; transform: rotate(-14deg); }
+.speller h2 { font-size: clamp(26px, 4vw, 36px); }
+.speller .meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.chip { font-size: 12.5px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--cobalt-soft); color: var(--cobalt); letter-spacing: .02em; }
+.chip.gold { background: var(--marigold); color: var(--placard-ink); }
+
+.mic { display: grid; gap: 14px; justify-items: start; }
+.hear { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.asks { display: flex; flex-wrap: wrap; gap: 8px; }
+.asks .btn { font-size: 14px; padding: 8px 14px; }
+.clue { min-height: 64px; width: 100%; border-left: 3px solid var(--marigold); padding: 8px 14px; background: var(--paper); border-radius: 0 10px 10px 0; font-size: 16.5px; }
+.clue .k { display: block; font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-bottom: 2px; }
+.clue .blank { font-family: var(--f-mono); letter-spacing: .1em; color: var(--cobalt); }
+
+.answer { display: grid; gap: 10px; }
+.answer input { width: 100%; font-family: var(--f-mono); font-size: clamp(22px, 4vw, 30px); letter-spacing: .14em; padding: 14px 16px; border-radius: 12px; border: 2px solid var(--line); background: var(--paper); text-transform: lowercase; }
+.answer input:focus { border-color: var(--cobalt); outline: none; }
+.answer-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: space-between; }
+
+.timer { font-family: var(--f-mono); font-variant-numeric: tabular-nums; font-weight: 700; font-size: 20px; display: inline-flex; align-items: center; gap: 8px; }
+.timer .bar { width: 120px; height: 6px; border-radius: 6px; background: var(--line); overflow: hidden; }
+.timer .bar i { display: block; height: 100%; background: var(--cobalt); transition: width 1s linear; }
+.timer.low { color: var(--bad); }
+.timer.low .bar i { background: var(--bad); }
+
+.peek { font-size: 13.5px; color: var(--muted); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.peek-word { font-family: var(--f-mono); font-size: 22px; font-weight: 700; color: var(--ink); letter-spacing: .08em; background: var(--marigold); color: var(--placard-ink); padding: 2px 10px; border-radius: 6px; }
+
+/* Verdict */
+.verdict { display: grid; gap: 16px; }
+.verdict .stamp { font-family: var(--f-display); font-size: clamp(30px, 5vw, 44px); }
+.verdict.ok .stamp { color: var(--good); }
+.verdict.no .stamp { color: var(--bad); }
+.tiles { display: flex; flex-wrap: wrap; gap: 5px; }
+.tiles span { min-width: 34px; height: 42px; padding: 0 6px; display: grid; place-items: center; border-radius: 6px; font-family: var(--f-mono); font-weight: 700; font-size: 20px; text-transform: lowercase; background: var(--paper); border: 1.5px solid var(--line); }
+.tiles.correct span { background: var(--good-soft); border-color: var(--good); color: var(--good); }
+.tiles span.x { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); }
+.tiles span.gap { background: transparent; border-style: dashed; color: var(--muted); }
+.verdict .def { color: var(--muted); font-size: 15px; }
+.notice { padding: 12px 14px; border-radius: 10px; background: var(--cobalt-soft); font-weight: 600; font-size: 15px; }
+
+/* Scoreboard */
+.board h3 { font-size: 22px; margin-bottom: 4px; }
+.board .sub { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+.board ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.board li { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 10px; border: 1px solid transparent; }
+.board li.now { border-color: var(--cobalt); background: var(--cobalt-soft); }
+.board li.out { opacity: .5; }
+.board li.out .nm { text-decoration: line-through; }
+.board .pn { width: 34px; height: 28px; border-radius: 5px; background: var(--marigold); color: var(--placard-ink); font-family: var(--f-mono); font-weight: 700; display: grid; place-items: center; font-size: 13px; }
+.board .nm { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board .st { font-family: var(--f-mono); font-variant-numeric: tabular-nums; font-size: 14px; font-weight: 700; display: flex; gap: 6px; align-items: center; }
+.hearts { letter-spacing: 1px; color: var(--bad); font-size: 13px; }
+.hearts .gone { color: var(--line); }
+.board .marks { display: flex; gap: 3px; margin-top: 2px; }
+.board .marks i { width: 8px; height: 8px; border-radius: 2px; background: var(--good); }
+.board .marks i.m { background: var(--bad); }
+.board-foot { margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Winner */
+.winner { text-align: left; display: grid; gap: 18px; }
+.winner .big { font-size: clamp(36px, 7vw, 64px); }
+.winner .big em { font-style: normal; color: var(--cobalt); }
+.ribbon { display: inline-flex; align-items: center; gap: 12px; }
+.ribbon .placard { margin-top: 14px; }
+.missed-list { display: grid; gap: 6px; font-size: 15px; }
+.missed-list div { display: flex; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+.missed-list code { font-family: var(--f-mono); font-weight: 700; color: var(--good); }
+.missed-list s { font-family: var(--f-mono); color: var(--bad); }
+
+.fade-in { animation: fade .25s ease both; }
+@keyframes fade { from { transform: translateY(6px); opacity: .4; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .fade-in { animation: none; } .timer .bar i { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header class="mast">
+    <h1>Spelling Bee <em>Night</em></h1>
+    <span class="tag" id="mastTag">Pass the phone. Spell the word.</span>
+  </header>
+  <main id="app"></main>
+</div>
+
+<script>
+/* ---------- Word lists ----------
+   [word, part of speech, definition, sentence, language of origin, alternates?] */
+const WORDS = {
+  beginner: [
+    ["friend","noun","A person you like and trust.","My best friend sat next to me at lunch.","Old English"],
+    ["because","conjunction","For the reason that.","We stayed inside because it was raining.","Middle English"],
+    ["laugh","verb","To make sounds that show you think something is funny.","The clown made everyone laugh.","Old English"],
+    ["school","noun","A place where children go to learn.","The bus takes us to school every morning.","Greek, via Latin"],
+    ["people","noun","Men, women, and children.","Many people came to watch the parade.","Latin, via French"],
+    ["answer","noun","A reply to a question.","She raised her hand to give the answer.","Old English"],
+    ["island","noun","A piece of land with water all around it.","We took a small boat to the island.","Old English"],
+    ["knife","noun","A tool with a sharp blade for cutting.","Dad used a knife to slice the bread.","Old Norse"],
+    ["ocean","noun","A very large body of salt water.","Whales swim in the ocean.","Greek"],
+    ["giraffe","noun","A tall African animal with a very long neck.","The giraffe ate leaves from the top of the tree.","Arabic, via Italian"],
+    ["castle","noun","A large stone building with thick walls and towers.","The king lived in a castle on the hill.","Latin"],
+    ["library","noun","A place where books are kept for people to read or borrow.","I borrowed three books from the library.","Latin"],
+    ["enough","adjective","As much as is needed.","Do we have enough chairs for everyone?","Old English"],
+    ["thought","noun","An idea in your mind.","That was a kind thought.","Old English"],
+    ["juice","noun","The liquid that comes from fruit or vegetables.","I drank a glass of orange juice.","Latin, via French"],
+    ["bridge","noun","A structure built to cross over a river or road.","We walked across the bridge to the park.","Old English"],
+    ["kitchen","noun","A room where food is cooked.","Mom is baking cookies in the kitchen.","Latin"],
+    ["elephant","noun","A huge gray animal with a long trunk.","The elephant sprayed water with its trunk.","Greek"],
+    ["surprise","noun","Something you did not expect.","The party was a big surprise.","French"],
+    ["Wednesday","noun","The day after Tuesday.","We have art class on Wednesday.","Old English"],
+    ["quiet","adjective","Making little or no noise.","Please be quiet in the library.","Latin"],
+    ["money","noun","Coins and paper bills used to buy things.","I saved my money for a new bike.","Latin"],
+    ["pretty","adjective","Pleasant to look at.","She picked a pretty flower for her teacher.","Old English"],
+    ["tomorrow","noun","The day after today.","We will go to the zoo tomorrow.","Old English"],
+    ["sugar","noun","A sweet substance used in food and drinks.","Don't put too much sugar in your tea.","Arabic, via French"],
+    ["guess","verb","To give an answer without being sure.","Can you guess what is in the box?","Middle English"],
+    ["square","noun","A shape with four equal sides.","Draw a square on your paper.","Latin, via French"],
+    ["doctor","noun","A person trained to treat sick people.","The doctor checked my ears.","Latin"],
+    ["cousin","noun","The child of your aunt or uncle.","My cousin is visiting this summer.","Latin, via French"],
+    ["straight","adjective","Without a bend or curve.","Draw a straight line with a ruler.","Old English"]
+  ],
+  intermediate: [
+    ["necessary","adjective","Needed; required.","Water is necessary for all living things.","Latin"],
+    ["separate","verb","To move apart or divide into parts.","Separate the egg whites from the yolks.","Latin"],
+    ["rhythm","noun","A strong, regular repeated pattern of sound or movement.","Clap along to the rhythm of the song.","Greek"],
+    ["calendar","noun","A chart showing the days, weeks, and months of a year.","Mark the date of the party on the calendar.","Latin"],
+    ["receive","verb","To get or be given something.","Did you receive my letter?","Latin, via French"],
+    ["restaurant","noun","A place where meals are cooked and served.","We ate dinner at a new restaurant downtown.","French"],
+    ["environment","noun","The surroundings in which people, animals, or plants live.","We should all help protect the environment.","French"],
+    ["definitely","adverb","Without any doubt.","I will definitely be at your game.","Latin"],
+    ["embarrass","verb","To make someone feel awkward or ashamed.","Please don't embarrass me in front of my friends.","French, from Spanish"],
+    ["occasion","noun","A special event or time.","A birthday is a happy occasion.","Latin"],
+    ["government","noun","The group of people who run a country or state.","The government passed a new law.","Latin, via French"],
+    ["February","noun","The second month of the year.","February is the shortest month.","Latin"],
+    ["knowledge","noun","What you know from learning or experience.","She has a lot of knowledge about birds.","Middle English"],
+    ["vacuum","noun","A space with no air in it; also a machine that sucks up dirt.","Outer space is nearly a perfect vacuum.","Latin"],
+    ["lightning","noun","A flash of light in the sky during a storm.","Lightning lit up the whole sky.","Old English"],
+    ["mischievous","adjective","Playfully causing trouble.","The mischievous puppy hid my shoe.","Anglo-French"],
+    ["colonel","noun","A high-ranking officer in an army.","The colonel gave the order to march.","Italian, via French"],
+    ["parallel","adjective","Side by side and always the same distance apart.","Railroad tracks run parallel to each other.","Greek"],
+    ["beginning","noun","The start of something.","Read the story from the beginning.","Old English"],
+    ["committee","noun","A group chosen to make decisions or plans.","The committee planned the school dance.","Latin, via French"],
+    ["guarantee","noun","A promise that something will happen or work.","The toaster comes with a one-year guarantee.","French"],
+    ["scissors","noun","A cutting tool with two crossed blades.","Pass me the scissors, please.","Latin, via French"],
+    ["neighbor","noun","A person who lives near you.","Our neighbor waters our plants when we travel.","Old English",["neighbour"]],
+    ["business","noun","The work of buying and selling, or a company that does it.","Her business sells handmade candles.","Old English"],
+    ["pumpkin","noun","A large, round orange fruit with a thick skin.","We carved a pumpkin for Halloween.","Greek, via French"],
+    ["accommodate","verb","To provide room for, or to fit someone's needs.","The hotel can accommodate two hundred guests.","Latin"],
+    ["tongue","noun","The movable muscle in the mouth used for tasting and talking.","The dog licked my hand with its tongue.","Old English"],
+    ["conscience","noun","Your inner sense of right and wrong.","My conscience told me to return the wallet.","Latin"],
+    ["silhouette","noun","A dark outline of something seen against a light background.","We saw the silhouette of a cat in the window.","French"],
+    ["bouquet","noun","A bunch of flowers arranged together.","He gave her a bouquet of roses.","French"]
+  ],
+  advanced: [
+    ["bureaucracy","noun","A system of government with many complicated rules and officials.","The building permit was delayed by bureaucracy.","French"],
+    ["conscientious","adjective","Careful and wanting to do things well.","She is a conscientious student who never misses homework.","Latin, via French"],
+    ["onomatopoeia","noun","A word that imitates the sound it describes.","The word buzz is an example of onomatopoeia.","Greek"],
+    ["pharaoh","noun","A ruler of ancient Egypt.","The pharaoh was buried inside a pyramid.","Egyptian, via Greek"],
+    ["entrepreneur","noun","A person who starts and runs a business.","The young entrepreneur opened a bakery.","French"],
+    ["liaison","noun","A connection or line of communication between groups.","She acts as a liaison between the school and parents.","French"],
+    ["maneuver","noun","A skillful movement or action.","The pilot made a tricky maneuver to avoid the storm.","French",["manoeuvre"]],
+    ["millennium","noun","A period of one thousand years.","The year 2000 marked the start of a new millennium.","Latin"],
+    ["questionnaire","noun","A set of written questions used to gather information.","Please fill out the questionnaire before you leave.","French"],
+    ["rendezvous","noun","A planned meeting at a certain time and place.","They set a rendezvous at the fountain at noon.","French"],
+    ["surveillance","noun","Close watch kept over someone or something.","The bank is under video surveillance.","French"],
+    ["Fahrenheit","noun","A temperature scale on which water freezes at 32 degrees.","It was 90 degrees Fahrenheit outside.","German, from a surname"],
+    ["chrysanthemum","noun","A garden plant with large, colorful, many-petaled flowers.","Grandma grows a chrysanthemum by the porch.","Greek"],
+    ["handkerchief","noun","A small square of cloth for wiping the nose or face.","He folded a handkerchief into his jacket pocket.","English and French"],
+    ["idiosyncrasy","noun","A habit or way of behaving that is peculiar to one person.","Humming while reading is his odd idiosyncrasy.","Greek"],
+    ["pneumonia","noun","A serious infection of the lungs.","She stayed in the hospital with pneumonia.","Greek"],
+    ["reminiscence","noun","The act of remembering past experiences.","Her reminiscence of summer camp made us laugh.","Latin"],
+    ["sacrilegious","adjective","Treating something sacred with disrespect.","He thought putting ketchup on the steak was sacrilegious.","Latin"],
+    ["dilemma","noun","A situation where you must choose between difficult options.","She faced a dilemma about which team to join.","Greek"],
+    ["acquiesce","verb","To accept or agree quietly without protest.","He chose to acquiesce to their plan.","Latin, via French"],
+    ["mnemonic","noun","A trick or pattern that helps you remember something.","We used a mnemonic to learn the order of the planets.","Greek"],
+    ["cantaloupe","noun","A melon with orange flesh and a rough rind.","We had sliced cantaloupe for breakfast.","French, from an Italian place name"],
+    ["hemorrhage","noun","Heavy bleeding from a broken blood vessel.","The doctors stopped the hemorrhage quickly.","Greek",["haemorrhage"]],
+    ["exhilarate","verb","To make someone feel very happy and excited.","The roller coaster will exhilarate you.","Latin"],
+    ["privilege","noun","A special right or advantage.","Voting is both a privilege and a responsibility.","Latin"],
+    ["camouflage","noun","Colors or patterns that help something blend into its surroundings.","The chameleon uses camouflage to hide.","French"],
+    ["renaissance","noun","A revival or rebirth, especially of art and learning.","The town is enjoying a renaissance of live music.","French"],
+    ["asthma","noun","A condition that makes breathing difficult.","He carries an inhaler for his asthma.","Greek"],
+    ["connoisseur","noun","An expert judge in matters of taste.","My uncle is a connoisseur of cheese.","French"],
+    ["lieutenant","noun","An officer ranking below a captain.","The lieutenant led the patrol through the forest.","French"]
+  ],
+  championship: [
+    ["autochthonous","adjective","Native to the place where found; indigenous.","The island's autochthonous plants are protected by law.","Greek"],
+    ["logorrhea","noun","Excessive and often meaningless talk.","The speaker's logorrhea put the audience to sleep.","Greek",["logorrhoea"]],
+    ["succedaneum","noun","A substitute.","Margarine served as a succedaneum for butter.","Latin"],
+    ["appoggiatura","noun","A grace note that delays the main note of a melody.","The singer added an appoggiatura before the final note.","Italian"],
+    ["eudaemonic","adjective","Producing happiness and well-being.","The retreat promised a eudaemonic weekend.","Greek",["eudemonic"]],
+    ["vivisepulture","noun","The act of burying someone alive.","The old horror story centered on vivisepulture.","Latin"],
+    ["Weltschmerz","noun","Sadness about the state of the world.","The poet's verses were heavy with Weltschmerz.","German"],
+    ["cymotrichous","adjective","Having wavy hair.","The cymotrichous toddler refused to have her curls brushed.","Greek"],
+    ["scherenschnitte","noun","The art of cutting paper into decorative designs.","She framed her scherenschnitte of a farmhouse.","German"],
+    ["feuilleton","noun","A part of a newspaper devoted to light fiction, essays, or criticism.","He wrote a weekly feuilleton on the theater.","French"],
+    ["stromuhr","noun","An instrument for measuring the speed of blood flow.","The researcher calibrated the stromuhr before the test.","German"],
+    ["guerdon","noun","A reward.","The knight received a guerdon for his bravery.","French"],
+    ["marocain","noun","A ribbed crepe fabric.","Her gown was cut from silk marocain.","French"],
+    ["Ursprache","noun","A parent language reconstructed from its descendants.","Linguists try to reconstruct the Ursprache of the family.","German"],
+    ["serrefine","noun","A small forceps for clamping a blood vessel.","The surgeon reached for a serrefine.","French"],
+    ["prospicience","noun","The act of looking forward; foresight.","Her prospicience saved the company a fortune.","Latin"],
+    ["Laodicean","adjective","Lukewarm or indifferent, especially about religion or politics.","His Laodicean attitude annoyed the campaign volunteers.","Greek, from a place name"],
+    ["chiaroscurist","noun","An artist who uses strong contrasts of light and shadow.","The museum showed the work of a famous chiaroscurist.","Italian"],
+    ["pococurante","adjective","Indifferent or nonchalant.","He gave a pococurante shrug when he lost.","Italian"],
+    ["ratoon","noun","A new shoot that grows from the root of a plant after it is cut.","The farmer harvested the sugarcane ratoon.","Spanish"],
+    ["smaragdine","adjective","Emerald green in color.","The lake had a smaragdine glow at dawn.","Greek, via Latin"],
+    ["milieu","noun","The physical or social setting in which something happens.","She thrived in the artistic milieu of Paris.","French"],
+    ["vignette","noun","A brief, evocative description or scene.","The book is a series of vignettes about city life.","French"],
+    ["bouillabaisse","noun","A spicy fish stew from Provence.","We ordered bouillabaisse at a harbor cafe in Marseille.","French, from Provencal"],
+    ["sesquipedalian","adjective","Given to using long words.","The professor's sesquipedalian lectures confused the freshmen.","Latin"],
+    ["psittacism","noun","Mechanical, repetitive speech without thought, like a parrot's.","His answers in the debate were pure psittacism.","Greek"],
+    ["ptarmigan","noun","A grouse of mountain and arctic regions that turns white in winter.","A ptarmigan blended perfectly into the snow.","Scottish Gaelic"],
+    ["xanthosis","noun","A yellow discoloration of the skin.","The doctor noted mild xanthosis on the patient's palms.","Greek"],
+    ["floccinaucinihilipilification","noun","The act of judging something to be worthless.","His floccinaucinihilipilification of my essay stung.","Latin"],
+    ["pusillanimous","adjective","Lacking courage; timid.","The pusillanimous knight hid behind the castle wall.","Latin"]
+  ]
+};
+
+const LEVELS = {
+  beginner:     { name: "Beginner",     pips: 1, pts: 1, blurb: "Everyday words. Good for kids and warm-ups." },
+  intermediate: { name: "Intermediate", pips: 2, pts: 2, blurb: "Silent letters, double consonants, tricky vowels." },
+  advanced:     { name: "Advanced",     pips: 3, pts: 3, blurb: "French and Greek borrowings that trip up adults." },
+  championship: { name: "Championship", pips: 4, pts: 4, blurb: "Words from the deep end of national bees." },
+  ramp:         { name: "Ramp up",      pips: 0, pts: 0, blurb: "Starts at Beginner and gets harder every two rounds." }
+};
+const RAMP = ["beginner","beginner","intermediate","intermediate","advanced","advanced","championship"];
+
+/* ---------- State ---------- */
+let S = {
+  phase: "setup",
+  settings: { names: ["Alex", "Jordan", "Sam"], level: "ramp", mode: "elim", rounds: 5, timer: 0, answer: "type" },
+  players: [], round: 1, turnOrder: [], turnPos: 0, used: [], current: null, last: null, roundNote: "", log: []
+};
+let timerId = null, timeLeft = 0, setupError = "";
+
+const $app = document.getElementById("app");
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const norm = s => s.trim().toLowerCase().replace(/[‘’]/g, "'");
+
+function levelForRound(r) {
+  return S.settings.level === "ramp" ? RAMP[Math.min(r - 1, RAMP.length - 1)] : S.settings.level;
+}
+function pickWord(level) {
+  let pool = WORDS[level].filter(w => !S.used.includes(w[0]));
+  if (!pool.length) { S.used = S.used.filter(u => !WORDS[level].some(w => w[0] === u)); pool = WORDS[level]; }
+  const w = pool[Math.floor(Math.random() * pool.length)];
+  S.used.push(w[0]);
+  return { word: w[0], pos: w[1], def: w[2], sent: w[3], origin: w[4], alts: w[5] || [], level };
+}
+
+/* ---------- Speech ---------- */
+const canSpeak = "speechSynthesis" in window;
+let voice = null;
+function loadVoice() {
+  if (!canSpeak) return;
+  const vs = speechSynthesis.getVoices();
+  voice = vs.find(v => /en[-_]US/i.test(v.lang) && /natural|google|samantha|aria|jenny/i.test(v.name))
+       || vs.find(v => /en[-_]US/i.test(v.lang)) || vs.find(v => /^en/i.test(v.lang)) || null;
+}
+if (canSpeak) { loadVoice(); speechSynthesis.onvoiceschanged = loadVoice; }
+function say(text) {
+  if (!canSpeak) return;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    if (voice) u.voice = voice;
+    u.lang = voice ? voice.lang : "en-US";
+    u.rate = 0.85;
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+/* ---------- Setup screen ---------- */
+function renderSetup() {
+  const st = S.settings;
+  const lvl = Object.entries(LEVELS).map(([k, v]) => `
+    <input type="radio" name="level" id="lv-${k}" value="${k}" ${st.level === k ? "checked" : ""}>
+    <label for="lv-${k}"><b>${v.pips ? `<span class="pips">${[1,2,3,4].map(i => `<i class="${i <= v.pips ? "on" : ""}"></i>`).join("")}</span>` : ""}${v.name}</b><span>${v.blurb}</span></label>`).join("");
+  const opt = (name, val, label, sub) => `
+    <input type="radio" name="${name}" id="${name}-${val}" value="${val}" ${String(st[name]) === String(val) ? "checked" : ""}>
+    <label for="${name}-${val}"><b>${label}</b><span>${sub}</span></label>`;
+
+  $app.innerHTML = `
+  <div class="setup fade-in">
+    <section class="panel">
+      <div class="field">
+        <span class="label">Contestants</span>
+        <span class="hint">One device, passed around. Add 1 to 10 players. Playing alone works too.</span>
+        <div class="players" id="players">
+          ${st.names.map((n, i) => `
+            <div class="prow">
+              <span class="num" aria-hidden="true">${i + 1}</span>
+              <input id="p-${i}" data-i="${i}" value="${esc(n)}" maxlength="18" aria-label="Contestant ${i + 1} name" placeholder="Contestant ${i + 1}">
+              <button class="icon-btn" data-rm="${i}" aria-label="Remove contestant ${i + 1}" ${st.names.length <= 1 ? "disabled" : ""}>&times;</button>
+            </div>`).join("")}
+        </div>
+        <div><button class="btn ghost" id="addP" ${st.names.length >= 10 ? "disabled" : ""}>+ Add contestant</button></div>
+      </div>
+
+      <div class="field">
+        <span class="label">Difficulty</span>
+        <div class="seg">${lvl}</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="field">
+        <span class="label">Format</span>
+        <div class="seg">
+          ${opt("mode", "elim", "Classic", "One miss and you sit down.")}
+          ${opt("mode", "lives", "Three strikes", "Three misses and you're out.")}
+          ${opt("mode", "points", "Points", "Fixed rounds. Harder words score more.")}
+        </div>
+      </div>
+      <div class="field" ${st.mode === "points" ? "" : "hidden"} id="roundsField">
+        <label for="rounds">Rounds</label>
+        <div class="seg">
+          ${[3,5,8].map(n => opt("rounds", n, `${n} rounds`, n === 3 ? "Quick game" : n === 5 ? "Standard" : "Long night")).join("")}
+        </div>
+      </div>
+      <div class="field">
+        <span class="label">Shot clock</span>
+        <div class="seg">
+          ${opt("timer", 0, "Off", "Take your time.")}
+          ${opt("timer", 45, "45 sec", "Steady pressure.")}
+          ${opt("timer", 20, "20 sec", "Lightning round.")}
+        </div>
+      </div>
+      <div class="field">
+        <span class="label">How do spellers answer?</span>
+        <div class="seg">
+          ${opt("answer", "type", "Type it", "The app checks the spelling.")}
+          ${opt("answer", "aloud", "Say it out loud", "A friend sees the word and judges.")}
+        </div>
+      </div>
+
+      <div class="rules" style="margin-top:20px">
+        <p><strong>House rules.</strong> If everyone left in a round misses, nobody is eliminated. Ask for the definition, a sentence, or the language of origin as many times as you like.</p>
+        ${canSpeak ? "" : "<p><strong>No voice on this device.</strong> Use the pronouncer peek so a friend can read each word aloud.</p>"}
+      </div>
+      <div class="setup-foot">
+        <button class="btn primary big" id="start">Start the bee</button>
+        <span class="err" id="err">${esc(setupError)}</span>
+      </div>
+    </section>
+  </div>`;
+
+  $app.querySelectorAll(".prow input").forEach(inp => inp.addEventListener("input", e => { st.names[+e.target.dataset.i] = e.target.value; }));
+  $app.querySelectorAll("[data-rm]").forEach(b => b.addEventListener("click", () => { st.names.splice(+b.dataset.rm, 1); render(); }));
+  document.getElementById("addP").addEventListener("click", () => {
+    st.names.push(""); render();
+    const last = document.getElementById(`p-${st.names.length - 1}`); if (last) last.focus();
+  });
+  $app.querySelectorAll('.seg input[type="radio"]').forEach(r => r.addEventListener("change", () => {
+    st[r.name] = ["rounds","timer"].includes(r.name) ? +r.value : r.value;
+    if (r.name === "mode") document.getElementById("roundsField").hidden = st.mode !== "points";
+  }));
+  document.getElementById("start").addEventListener("click", startGame);
+}
+
+function startGame() {
+  const names = S.settings.names.map((n, i) => n.trim() || `Speller ${i + 1}`);
+  if (!names.length) { setupError = "Add at least one contestant."; return render(); }
+  setupError = "";
+  S.players = names.map((name, i) => ({ name, num: i + 1, alive: true, lives: 3, score: 0, marks: [] }));
+  S.round = 1; S.used = []; S.log = []; S.roundNote = "";
+  beginRound();
+}
+
+/* ---------- Rounds and turns ---------- */
+function beginRound() {
+  S.turnOrder = S.players.map((p, i) => i).filter(i => S.players[i].alive);
+  S.turnPos = 0;
+  S.roundMisses = [];
+  nextTurn();
+}
+function nextTurn() {
+  S.current = pickWord(levelForRound(S.round));
+  S.last = null;
+  S.phase = "turn";
+  S.peek = false;
+  S.clue = null;
+  render();
+  startTimer();
+}
+function currentPlayer() { return S.players[S.turnOrder[S.turnPos]]; }
+
+function startTimer() {
+  stopTimer();
+  if (!S.settings.timer) return;
+  timeLeft = S.settings.timer;
+  updateTimer();
+  timerId = setInterval(() => {
+    timeLeft--;
+    updateTimer();
+    if (timeLeft <= 0) {
+      stopTimer();
+      if (S.settings.answer === "type") judge(false, (document.getElementById("ans") || {}).value || "", true);
+      else { const t = document.getElementById("timer"); if (t) t.querySelector("b").textContent = "Time!"; }
+    }
+  }, 1000);
+}
+function stopTimer() { if (timerId) clearInterval(timerId); timerId = null; }
+function updateTimer() {
+  const t = document.getElementById("timer"); if (!t) return;
+  t.querySelector("b").textContent = `0:${String(Math.max(timeLeft, 0)).padStart(2, "0")}`;
+  t.querySelector(".bar i").style.width = `${(Math.max(timeLeft, 0) / S.settings.timer) * 100}%`;
+  t.classList.toggle("low", timeLeft <= 5);
+}
+
+function judge(correct, attempt, timedOut) {
+  stopTimer();
+  if (canSpeak) speechSynthesis.cancel();
+  const p = currentPlayer(), w = S.current;
+  p.marks.push(correct ? 1 : 0);
+  if (correct) p.score += LEVELS[w.level].pts;
+  else {
+    S.roundMisses.push(S.turnOrder[S.turnPos]);
+    S.log.push({ name: p.name, word: w.word, attempt });
+  }
+  S.last = { correct, attempt, timedOut, word: w, player: p.name };
+  S.turnPos++;
+  S.roundNote = "";
+  S.gameOver = false;
+  if (S.turnPos >= S.turnOrder.length) endRound();
+  S.phase = "result";
+  render();
+  say(correct ? "That is correct." : `That is incorrect. The correct spelling is ${w.word.split("").join(", ")}.`);
+}
+
+function endRound() {
+  const st = S.settings, active = S.turnOrder.length, misses = S.roundMisses;
+  const solo = S.players.length === 1;
+  if (st.mode === "points") {
+    if (S.round >= st.rounds) S.gameOver = true;
+    else S.roundNote = `Round ${S.round} is done.`;
+  } else {
+    if (misses.length && misses.length === active && active > 1) {
+      S.roundNote = "Everyone left missed this round, so everyone stays in.";
+    } else {
+      const outNow = [];
+      misses.forEach(i => {
+        const p = S.players[i];
+        if (st.mode === "lives") { p.lives--; if (p.lives <= 0) { p.alive = false; outNow.push(p.name); } }
+        else { p.alive = false; outNow.push(p.name); }
+      });
+      if (st.mode === "lives") {
+        const struck = misses.map(i => S.players[i]).filter(p => p.alive).map(p => `${p.name} (${p.lives} left)`);
+        S.roundNote = [outNow.length ? `Out: ${outNow.join(", ")}.` : "", struck.length ? `Strike for ${struck.join(", ")}.` : ""].filter(Boolean).join(" ") || "Clean round. Nobody missed.";
+      } else {
+        S.roundNote = outNow.length ? `Out this round: ${outNow.join(", ")}.` : "Clean round. Nobody missed.";
+      }
+    }
+    const alive = S.players.filter(p => p.alive).length;
+    if (solo ? alive === 0 : alive <= 1) S.gameOver = true;
+  }
+}
+
+function advance() {
+  if (S.gameOver) { S.phase = "over"; render(); return; }
+  if (S.turnPos >= S.turnOrder.length) { S.round++; beginRound(); }
+  else nextTurn();
+}
+
+/* ---------- Turn screen ---------- */
+function blankSentence(w) {
+  const re = new RegExp(w.word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "ig");
+  return esc(w.sent).replace(re, `<span class="blank">${"_".repeat(Math.min(w.word.length, 12))}</span>`);
+}
+function clueHTML() {
+  const w = S.current;
+  const map = {
+    def: ["Definition", `<em>(${esc(w.pos)})</em> ${esc(w.def)}`],
+    sent: ["In a sentence", blankSentence(w)],
+    origin: ["Language of origin", esc(w.origin)],
+    len: ["Letters", `${w.word.length} letters`]
+  };
+  if (!S.clue) return `<span class="k">Pronouncer</span>${canSpeak ? "Tap <b>Hear the word</b>. Ask for anything else below." : "This device can't speak. Have a friend use the pronouncer peek and read the word aloud."}`;
+  const [k, v] = map[S.clue];
+  return `<span class="k">${k}</span>${v}`;
+}
+function renderTurn() {
+  const p = currentPlayer(), w = S.current, lv = LEVELS[w.level], st = S.settings;
+  const aloud = st.answer === "aloud";
+  $app.innerHTML = `
+  <div class="stage">
+    <section class="panel podium fade-in">
+      <div class="speller">
+        <div class="placard" aria-hidden="true">${p.num}</div>
+        <div>
+          <div class="eyebrow">Round ${S.round} · Now spelling</div>
+          <h2>${esc(p.name)}</h2>
+          <div class="meta">
+            <span class="chip gold">${lv.name}</span>
+            ${st.mode === "points" ? `<span class="chip">Worth ${lv.pts} pt${lv.pts > 1 ? "s" : ""}</span>` : ""}
+            ${st.mode === "lives" ? `<span class="chip">${p.lives} ${p.lives === 1 ? "life" : "lives"} left</span>` : ""}
+          </div>
+        </div>
+      </div>
+
+      <div class="mic">
+        <div class="hear">
+          <button class="btn primary big" id="hear" ${canSpeak ? "" : "disabled"}>Hear the word</button>
+          ${st.timer ? `<span class="timer" id="timer"><span class="bar"><i style="width:100%"></i></span><b>0:${String(st.timer).padStart(2,"0")}</b></span>` : ""}
+        </div>
+        <div class="asks" role="group" aria-label="Ask the pronouncer">
+          <button class="btn" data-clue="def">Definition</button>
+          <button class="btn" data-clue="sent">Use it in a sentence</button>
+          <button class="btn" data-clue="origin">Language of origin</button>
+          <button class="btn" data-clue="len">How many letters?</button>
+        </div>
+        <div class="clue" id="clue" aria-live="polite">${clueHTML()}</div>
+      </div>
+
+      ${aloud ? `
+      <div class="answer">
+        <div class="eyebrow">Judge</div>
+        <p style="color:var(--muted);font-size:15px">The speller says the word, spells it out loud, then says it again. The judge holds the peek button to check, then calls it.</p>
+        <div class="peek">
+          <button class="btn" id="peek">${S.peek ? "Hide word" : "Show word to judge"}</button>
+          ${S.peek ? `<span class="peek-word">${esc(w.word)}</span>` : ""}
+        </div>
+        <div class="answer-row">
+          <button class="btn good big" id="ok">Correct</button>
+          <button class="btn bad big" id="no">Incorrect</button>
+        </div>
+      </div>` : `
+      <form class="answer" id="form" autocomplete="off">
+        <label class="eyebrow" for="ans">Type your spelling</label>
+        <input id="ans" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="text">
+        <div class="answer-row">
+          <button class="btn primary big" type="submit">Lock it in</button>
+          <span class="peek">
+            <button class="btn ghost" type="button" id="peek">${S.peek ? "Hide word" : "Pronouncer peek"}</button>
+            ${S.peek ? `<span class="peek-word">${esc(w.word)}</span>` : ""}
+          </span>
+        </div>
+      </form>`}
+    </section>
+    ${boardHTML()}
+  </div>`;
+
+  const hear = document.getElementById("hear");
+  hear && hear.addEventListener("click", () => say(w.word));
+  $app.querySelectorAll("[data-clue]").forEach(b => b.addEventListener("click", () => {
+    S.clue = b.dataset.clue;
+    document.getElementById("clue").innerHTML = clueHTML();
+    if (S.clue === "def") say(`${w.pos}. ${w.def}`);
+    if (S.clue === "sent") say(w.sent);
+    if (S.clue === "origin") say(`The word comes from ${w.origin}.`);
+    if (S.clue === "len") say(`${w.word.length} letters.`);
+  }));
+  document.getElementById("peek").addEventListener("click", () => {
+    const typed = (document.getElementById("ans") || {}).value;
+    S.peek = !S.peek;
+    renderTurn(); updateTimer();
+    const a = document.getElementById("ans"); if (a && typed) a.value = typed;
+  });
+  if (aloud) {
+    document.getElementById("ok").addEventListener("click", () => judge(true, w.word));
+    document.getElementById("no").addEventListener("click", () => judge(false, ""));
+  } else {
+    const form = document.getElementById("form"), ans = document.getElementById("ans");
+    form.addEventListener("submit", e => {
+      e.preventDefault();
+      const v = norm(ans.value);
+      if (!v) { ans.focus(); return; }
+      const ok = [w.word, ...w.alts].some(x => norm(x) === v);
+      judge(ok, ans.value.trim());
+    });
+    if (!S.peek) ans.focus({ preventScroll: true });
+  }
+}
+
+/* ---------- Result screen ---------- */
+function attemptTiles(word, attempt) {
+  const a = norm(attempt), t = norm(word), n = Math.max(a.length, t.length);
+  if (!a) return "";
+  let out = "";
+  for (let i = 0; i < n; i++) {
+    const ch = a[i];
+    if (ch === undefined) out += `<span class="gap">&nbsp;</span>`;
+    else out += `<span class="${ch === t[i] ? "" : "x"}">${esc(ch)}</span>`;
+  }
+  return `<div class="tiles" aria-label="Your spelling">${out}</div>`;
+}
+function renderResult() {
+  const L = S.last, w = L.word, aloud = S.settings.answer === "aloud";
+  const roundDone = S.turnPos >= S.turnOrder.length;
+  const nextP = !roundDone ? S.players[S.turnOrder[S.turnPos]] : null;
+  const label = S.gameOver ? "See the results" : roundDone ? `Start round ${S.round + 1}` : `Pass to ${nextP.name}`;
+  $app.innerHTML = `
+  <div class="stage">
+    <section class="panel verdict ${L.correct ? "ok" : "no"} fade-in">
+      <div class="eyebrow">Round ${S.round} · ${esc(L.player)}</div>
+      <div class="stamp">${L.correct ? "Correct." : L.timedOut ? "Time's up." : "Incorrect."}</div>
+      ${!L.correct && !aloud && L.attempt ? `<div><div class="eyebrow" style="margin-bottom:6px">You spelled</div>${attemptTiles(w.word, L.attempt)}</div>` : ""}
+      <div>
+        <div class="eyebrow" style="margin-bottom:6px">${L.correct ? "The word" : "Correct spelling"}</div>
+        <div class="tiles correct">${w.word.split("").map(c => `<span>${esc(c)}</span>`).join("")}</div>
+      </div>
+      <p class="def"><em>${esc(w.pos)}</em>. ${esc(w.def)} From ${esc(w.origin)}.${w.alts.length ? ` Also accepted: ${w.alts.map(esc).join(", ")}.` : ""}</p>
+      ${S.roundNote ? `<div class="notice">${esc(S.roundNote)}</div>` : ""}
+      <div><button class="btn primary big" id="next">${esc(label)}</button></div>
+    </section>
+    ${boardHTML()}
+  </div>`;
+  const nb = document.getElementById("next");
+  nb.addEventListener("click", advance);
+  nb.focus({ preventScroll: true });
+}
+
+/* ---------- Scoreboard ---------- */
+function boardHTML() {
+  const st = S.settings;
+  const nowIdx = S.phase === "turn" ? S.turnOrder[S.turnPos] : -1;
+  const list = S.players.map((p, i) => ({ p, i }));
+  if (st.mode === "points") list.sort((a, b) => b.p.score - a.p.score);
+  const status = p => {
+    if (st.mode === "points") return `<span>${p.score} pt${p.score === 1 ? "" : "s"}</span>`;
+    if (st.mode === "lives") return `<span class="hearts" aria-label="${p.lives} lives">${[0,1,2].map(k => `<span class="${k < p.lives ? "" : "gone"}">&#9829;</span>`).join("")}</span>`;
+    return `<span>${p.alive ? "In" : "Out"}</span>`;
+  };
+  const modeName = { elim: "Classic elimination", lives: "Three strikes", points: `Points · ${st.rounds} rounds` }[st.mode];
+  return `
+  <aside class="panel board">
+    <h3>Scoreboard</h3>
+    <div class="sub">${modeName} · ${LEVELS[st.level].name}${st.mode === "points" ? ` · Round ${Math.min(S.round, st.rounds)} of ${st.rounds}` : ` · Round ${S.round}`}</div>
+    <ol>
+      ${list.map(({ p, i }) => `
+        <li class="${i === nowIdx ? "now" : ""} ${p.alive || st.mode === "points" ? "" : "out"}">
+          <span class="pn">${p.num}</span>
+          <div style="min-width:0">
+            <div class="nm">${esc(p.name)}</div>
+            <div class="marks" aria-hidden="true">${p.marks.slice(-14).map(m => `<i class="${m ? "" : "m"}"></i>`).join("")}</div>
+          </div>
+          <span class="st">${status(p)}</span>
+        </li>`).join("")}
+    </ol>
+    <div class="board-foot">
+      <button class="btn ghost" id="quit">End game</button>
+    </div>
+  </aside>`;
+}
+
+/* ---------- Game over ---------- */
+function renderOver() {
+  stopTimer();
+  const st = S.settings, solo = S.players.length === 1;
+  let headline, sub, champ = null;
+  if (st.mode === "points") {
+    const top = Math.max(...S.players.map(p => p.score));
+    const winners = S.players.filter(p => p.score === top);
+    champ = winners[0];
+    headline = winners.length > 1 ? `It's a <em>tie</em>.` : `<em>${esc(champ.name)}</em> wins the bee.`;
+    sub = winners.length > 1 ? `${winners.map(p => esc(p.name)).join(" and ")} finished with ${top} points each.` : `${top} points after ${st.rounds} rounds.`;
+  } else if (solo) {
+    const p = S.players[0], got = p.marks.filter(Boolean).length;
+    champ = p;
+    headline = `<em>${got}</em> word${got === 1 ? "" : "s"} spelled.`;
+    sub = `${esc(p.name)} made it to round ${S.round}. Try to beat it.`;
+  } else {
+    champ = S.players.find(p => p.alive) || null;
+    headline = champ ? `<em>${esc(champ.name)}</em> wins the bee.` : "Nobody is left standing.";
+    sub = champ ? `Last speller standing after ${S.round} round${S.round === 1 ? "" : "s"}.` : "";
+  }
+  $app.innerHTML = `
+  <div class="stage">
+    <section class="panel winner fade-in">
+      <div class="ribbon">
+        ${champ ? `<div class="placard" aria-hidden="true">${champ.num}</div>` : ""}
+        <div class="eyebrow">Final results</div>
+      </div>
+      <h2 class="big">${headline}</h2>
+      <p style="color:var(--muted);font-size:17px">${sub}</p>
+      ${S.log.length ? `
+      <div>
+        <div class="eyebrow" style="margin-bottom:8px">Words that got away</div>
+        <div class="missed-list">
+          ${S.log.map(m => `<div><b>${esc(m.name)}</b> <code>${esc(m.word)}</code>${m.attempt ? ` <s>${esc(m.attempt)}</s>` : ""}</div>`).join("")}
+        </div>
+      </div>` : ""}
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn primary big" id="again">Rematch</button>
+        <button class="btn big" id="setupBtn">Change settings</button>
+      </div>
+    </section>
+    ${boardHTML()}
+  </div>`;
+  document.getElementById("again").addEventListener("click", startGame);
+  document.getElementById("setupBtn").addEventListener("click", () => { S.phase = "setup"; render(); });
+}
+
+/* ---------- Render ---------- */
+let quitArmed = false;
+function render() {
+  if (S.phase !== "turn") stopTimer();
+  quitArmed = false;
+  ({ setup: renderSetup, turn: renderTurn, result: renderResult, over: renderOver })[S.phase]();
+  const quit = document.getElementById("quit");
+  if (quit) {
+    if (S.phase === "over") quit.hidden = true;
+    quit.addEventListener("click", () => {
+      if (!quitArmed) { quitArmed = true; quit.textContent = "Tap again to end"; quit.classList.add("bad"); return; }
+      stopTimer(); S.phase = "setup"; render();
+    });
+  }
+}
+
+function start(data) {
+  if (data && data.S) S = data.S;
+  if (S.phase === "turn") { S.phase = "turn"; render(); startTimer(); } else render();
+}
+window.claude?.hot?.snapshot?.(() => ({ S }));
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+</script>
